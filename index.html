@@ -198,7 +198,7 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
 </style>
 </head>
 <body>
-<!-- build: 2026-09-25 v1.4 -->
+<!-- build: 2026-09-25 v1.5 -->
 <canvas id="c"></canvas>
 <svg id="frame" aria-hidden="true"><defs><pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse"><rect width="28" height="28" fill="#ffe3f1"/><circle cx="7" cy="7" r="4" fill="#ffc9e2"/><circle cx="21" cy="21" r="4" fill="#d6ecff"/></pattern></defs><path id="frameFill" fill="url(#dots)" fill-rule="evenodd"/><path id="frameEdge" fill="none" stroke="#3b2f55" stroke-width="5" stroke-linejoin="round"/></svg>
 <div id="feverFx"></div>
@@ -239,7 +239,7 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
   <div class="sub-copy">そらの ぷにぷにを ポンッと はじけさせよう！</div>
   <button class="btn" id="btnStart">スタート</button>
   <div class="title-row"><button class="btn sub small" id="btnSound">おと：オン</button></div>
-  <div class="ver">v1.4 / 2026-09-25</div>
+  <div class="ver">v1.5 / 2026-09-25</div>
 </div>
 
 <!-- あそびかた -->
@@ -356,11 +356,14 @@ const CONFIG = {
   shakeScale: 1.0,        // 画面の揺れの強さ
   comboWindow: 1.6,       // コンボが続く時間（秒）
   // --- 難易度 ---
-  enemyBulletSpeed: 7.5,  // 敵の弾の速さ
+  enemyBulletSpeed: 7.0,  // 敵の弾の速さ
   bossHP: 450,            // ボスの体力
-  shooterInterval: 1.4,   // 弾をうつ敵の発射間隔（秒）
-  bigInterval: 2.0,       // 大きい敵の発射間隔（秒）
-  waveShootRate: 0.5,     // ゆれる敵が弾をうつ確率（0〜1）
+  shooterInterval: 2.2,   // 弾をうつ敵の発射間隔（秒）
+  bigInterval: 2.8,       // 大きい敵の発射間隔（秒）
+  waveShootRate: 0.25,     // ゆれる敵が弾をうつ確率（0〜1）
+  enemyDensity: 0.65,     // 敵の数の倍率（1でもとの数、小さいほど少ない）
+  maxEnemies: 10,         // 画面に同時に出る敵の最大数
+  maxEnemyBullets: 24,    // 画面に同時に出る敵の弾の最大数
   dropHoming: 2.2,        // まっすぐの敵が自機の方へ寄ってくる強さ
   // --- 音量 ---
   bgmVolume: 0.32,
@@ -414,40 +417,31 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true 
 renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
 renderer.setClearColor(0x000000, 0);
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 300);
+const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.5, 400);   // 平行投影：ステージのふちが縦にまっすぐになる
 const CAM_DIR = new V3(0, 30, 17).normalize();
 const CAM_TARGET = new V3(0, 0, -1.2);
 const camBase = new V3();
 
 function fitCamera() {
-  const w = window.innerWidth, h = window.innerHeight;
+  const w = window.innerWidth, h = window.innerHeight, aspect = w / h;
   renderer.setSize(w, h, false);
-  camera.aspect = w / h;
-  camera.clearViewOffset();
-  camera.updateProjectionMatrix();
   const portrait = h > w;
   // 縦持ち：下の約1/4をコントローラー用にあける ／ 横持ち：左右にコントローラー用のすき間をあける
   const yTop = 0.9, yBot = portrait ? -1 + 2 * 0.25 : -0.93;
-  const half = (yTop - yBot) / 2, mid = (yTop + yBot) / 2;
   const xLim = portrait ? 0.97 : Math.min(0.97, 1 - 2 * 215 / w);
-  const corners = [
-    new V3(FIELD.xMin, 0, FIELD.zTop), new V3(FIELD.xMax, 0, FIELD.zTop),
-    new V3(FIELD.xMin, 0, FIELD.zBottom), new V3(FIELD.xMax, 0, FIELD.zBottom)];
-  let lo = 8, hi = 300;
-  const p = new V3();
-  for (let i = 0; i < 40; i++) {
-    const m = (lo + hi) / 2;
-    camera.position.copy(CAM_TARGET).addScaledVector(CAM_DIR, m);
-    camera.lookAt(CAM_TARGET); camera.updateMatrixWorld();
-    let ok = true;
-    for (const c of corners) { p.copy(c).project(camera); if (Math.abs(p.x) > xLim || Math.abs(p.y) > half) { ok = false; break; } }
-    if (ok) hi = m; else lo = m;
+  camBase.copy(CAM_TARGET).addScaledVector(CAM_DIR, 60);
+  camera.position.copy(camBase); camera.lookAt(CAM_TARGET); camera.updateMatrixWorld();
+  // ステージの四すみをカメラから見た座標にして、ちょうど入る大きさを計算
+  let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+  const v = new V3();
+  for (const [x, z] of [[FIELD.xMin, FIELD.zTop], [FIELD.xMax, FIELD.zTop], [FIELD.xMin, FIELD.zBottom], [FIELD.xMax, FIELD.zBottom]]) {
+    v.set(x, 0, z).applyMatrix4(camera.matrixWorldInverse);
+    minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x); minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
   }
-  camBase.copy(CAM_TARGET).addScaledVector(CAM_DIR, hi);
-  camera.position.copy(camBase); camera.lookAt(CAM_TARGET);
-  // ステージが上のほうに来るよう画面をずらす
-  camera.setViewOffset(w, h, 0, Math.round(mid * h / 2), w, h);
-  camera.updateMatrixWorld();
+  const H = Math.max(Math.max(-minX, maxX) / (aspect * xLim), (maxY - minY) / (yTop - yBot));
+  const c = maxY - yTop * H;   // ステージの上はしが yTop にくるように
+  camera.left = -H * aspect; camera.right = H * aspect; camera.top = c + H; camera.bottom = c - H;
+  camera.updateProjectionMatrix();
   drawFrame(w, h);
 }
 // ステージの外（かべ）を水玉もようでおおう
@@ -456,6 +450,7 @@ function drawFrame(w, h) {
   const tl = sp([FIELD.xMin - 0.3, FIELD.zTop - 3]), tr = sp([FIELD.xMax + 0.3, FIELD.zTop - 3]);
   const bl = sp([FIELD.xMin - 0.3, FIELD.zBottom + 0.8]), br = sp([FIELD.xMax + 0.3, FIELD.zBottom + 0.8]);
   const top = -10, bot = h > w ? bl[1] : h + 10;
+  tl[0] = bl[0] = Math.min(tl[0], bl[0]); tr[0] = br[0] = Math.max(tr[0], br[0]);
   const f = n => n.toFixed(1);
   const hole = `M${f(tl[0])} ${top} L${f(tr[0])} ${top} L${f(tr[0])} ${f(tr[1])} L${f(br[0])} ${f(bot)} L${f(bl[0])} ${f(bot)} L${f(tl[0])} ${f(tl[1])} Z`;
   $('frame').setAttribute('viewBox', `0 0 ${w} ${h}`);
@@ -517,7 +512,7 @@ const sparks = makePool(SPARK_N, () => ({ x: rand(-30, 30), y: rand(-6, -2), z: 
 //  自機
 // ---------------------------------------------------------------------
 const playerRoot = new THREE.Group(); scene.add(playerRoot);
-const ship = new THREE.Group(); ship.scale.setScalar(1.35); playerRoot.add(ship);
+const ship = new THREE.Group(); ship.scale.setScalar(1.1); playerRoot.add(ship);
 let flameOuter, flameInner, coreMesh, coreRing, shieldMesh, chargeOrb, chargeRing;
 {
   const body = withOutline(new THREE.Mesh(sphereGeo, toon(0xffffff)), 1.08);
@@ -566,10 +561,10 @@ weaponRing.position.y = 0.05; weaponRing.visible = false; playerRoot.add(weaponR
 //  敵
 // ---------------------------------------------------------------------
 const ENEMY_DEF = {
-  drop:    { hp: 1,  r: 1.05,  color: 0x6fe3c4, score: 100,  stars: 2,  speed: 7.0 },
-  wave:    { hp: 3,  r: 1.1, color: 0xffcf4a, score: 150,  stars: 3,  speed: 5.5 },
-  shooter: { hp: 8,  r: 1.3,  color: 0xb08cff, score: 300,  stars: 4,  speed: 6.0 },
-  big:     { hp: 32, r: 2.2,  color: 0xff9660, score: 1000, stars: 10, speed: 2.4 },
+  drop:    { hp: 1,  r: 0.85,  color: 0x6fe3c4, score: 100,  stars: 2,  speed: 7.0 },
+  wave:    { hp: 3,  r: 0.9, color: 0xffcf4a, score: 150,  stars: 3,  speed: 5.5 },
+  shooter: { hp: 8,  r: 1.05,  color: 0xb08cff, score: 300,  stars: 4,  speed: 6.0 },
+  big:     { hp: 32, r: 1.8,  color: 0xff9660, score: 1000, stars: 10, speed: 2.4 },
 };
 function addFace(parent, r, eyeSize = 0.24) {
   const eyeR = eyeSize * r;
@@ -630,7 +625,7 @@ const enemies = [];
 //  ボス
 // ---------------------------------------------------------------------
 const boss = { active: false, hp: 0, maxHp: 0, x: 0, z: -26, t: 0, phase: 'none', pat: 0, patT: 0, fireT: 0, spin: 0,
-  summonT: 7, flash: 0, squash: 0, dieT: 0, boomT: 0, finalDone: false, fanFlip: false, mesh: null, mat: null, r: 3.5 };
+  summonT: 7, flash: 0, squash: 0, dieT: 0, boomT: 0, finalDone: false, fanFlip: false, mesh: null, mat: null, r: 3.1 };
 {
   const g = new THREE.Group();
   const mat = toon(0xff7eb8, { emissive: 0xffffff, emissiveIntensity: 0 });
@@ -1018,20 +1013,16 @@ const WAVES = [
 ];
 // むずかしさアップ用の追加ウェーブ
 WAVES.push(
-  { t: 24.0, type: 'shooter', form: 'row', x: 0, n: 1, gap: 0 },
-  { t: 33.0, type: 'wave', form: 'row', x: 0, n: 5, gap: 3.4 },
   { t: 44.0, type: 'shooter', form: 'row', x: 0, n: 2, gap: 12 },
-  { t: 58.0, type: 'drop', form: 'v', x: 0, n: 7, gap: 2.2 },
-  { t: 62.0, type: 'shooter', form: 'row', x: 0, n: 3, gap: 7 },
-  { t: 74.0, type: 'wave', form: 'row', x: 0, n: 6, gap: 3 },
   { t: 78.0, type: 'shooter', form: 'row', x: 0, n: 2, gap: 12 },
-  { t: 92.0, type: 'shooter', form: 'row', x: 0, n: 4, gap: 5 },
-  { t: 106.0, type: 'shooter', form: 'row', x: 0, n: 3, gap: 7 },
-  { t: 120.0, type: 'shooter', form: 'row', x: 0, n: 4, gap: 5 },
+  { t: 106.0, type: 'shooter', form: 'row', x: 0, n: 2, gap: 10 },
 );
 function buildSpawnList() {
   const list = [];
-  for (const w of WAVES) {
+  for (const w0 of WAVES) {
+    // 小さい敵の隊列は数を減らし、そのぶん間を広げる
+    const thin = (w0.type === 'drop' || w0.type === 'wave') && (w0.n || 1) > 2;
+    const w = thin ? { ...w0, n: Math.max(2, Math.round(w0.n * CONFIG.enemyDensity)), gap: w0.gap && w0.gap / CONFIG.enemyDensity, dt: w0.dt && w0.dt / CONFIG.enemyDensity } : w0;
     const n = w.n || 1;
     for (let i = 0; i < n; i++) {
       const off = i - (n - 1) / 2;
@@ -1057,8 +1048,10 @@ function spawnEnemy(type, x, z = SPAWN_Z) {
   e.mesh.visible = true; e.mesh.position.set(x, 0, z);
   return e;
 }
+let ebCount = 0;
 function fireEnemy(x, z, ang, sp) {
-  const b = take(eBullets); if (!b) return;
+  if (ebCount >= CONFIG.maxEnemyBullets) return;   // 弾が多すぎるときはうたない
+  const b = take(eBullets); if (!b) return; ebCount++;
   b.active = true; b.x = x; b.z = z; b.vx = Math.cos(ang) * sp; b.vz = Math.sin(ang) * sp; b.t = 0;
 }
 function aimAt(x, z) { return Math.atan2(player.z - z, player.x - x); }
@@ -1338,7 +1331,8 @@ function updateSpawns(dt) {
   if (state !== 'playing') return;
   stageTime += dt;
   while (spawnIdx < spawnList.length && spawnList[spawnIdx].t <= stageTime) {
-    const s = spawnList[spawnIdx++]; spawnEnemy(s.type, s.x);
+    const s = spawnList[spawnIdx++];
+    if (s.type === 'big' || enemies.filter(e => e.active).length < CONFIG.maxEnemies) spawnEnemy(s.type, s.x);   // 多すぎるときは出さない
   }
   if (!bossTriggered && spawnIdx >= spawnList.length) {
     const alive = enemies.some(e => e.active);
@@ -1384,7 +1378,7 @@ function updateEnemies(dt) {
           e.fireT -= dt;
         }
         if (e.phase !== 'out' && e.z > FIELD.zTop) {
-          if (e.fireT <= 0 && player.alive) { const a = aimAt(e.x, e.z); for (const k of (stageTime > 45 ? [-1, 0, 1] : [0])) fireEnemy(e.x, e.z + 0.8, a + k * 0.28, CONFIG.enemyBulletSpeed); SND.enemyShot(); e.fireT = CONFIG.shooterInterval; }
+          if (e.fireT <= 0 && player.alive) { const a = aimAt(e.x, e.z); for (const k of (stageTime > 70 ? [-0.5, 0.5] : [0])) fireEnemy(e.x, e.z + 0.8, a + k * 0.28, CONFIG.enemyBulletSpeed); SND.enemyShot(); e.fireT = CONFIG.shooterInterval; }
           if (e.stayT > 7) e.phase = 'out';
         }
         if (e.phase === 'out') e.z += 7 * dt;
@@ -1395,7 +1389,7 @@ function updateEnemies(dt) {
           e.fireT -= dt;
           if (e.fireT <= 0 && player.alive) {
             const a = aimAt(e.x, e.z);
-            for (let k = -3; k <= 3; k++) fireEnemy(e.x, e.z + 1.2, a + k * 0.22, CONFIG.enemyBulletSpeed * 0.9);
+            for (let k = -1; k <= 1; k++) fireEnemy(e.x, e.z + 1.2, a + k * 0.3, CONFIG.enemyBulletSpeed * 0.9);
             SND.enemyShot(); e.fireT = CONFIG.bigInterval;
           }
         }
@@ -1433,16 +1427,16 @@ function updateBoss(dt) {
       const ox = boss.x, oz = boss.z + 3.2;
       if (boss.pat === 0) {
         const a = aimAt(ox, oz);
-        for (const k of [-2, -1, 0, 1, 2]) fireEnemy(ox, oz, a + k * 0.2, 7.2);
-        boss.fireT = 0.8; SND.enemyShot();
+        for (const k of [-1, 0, 1]) fireEnemy(ox, oz, a + k * 0.25, 6.5);
+        boss.fireT = 1.2; SND.enemyShot();
       } else if (boss.pat === 1) {
         boss.fanFlip = !boss.fanFlip; const off = boss.fanFlip ? 0.1 : -0.1;
-        for (let i = 0; i < 13; i++) fireEnemy(ox, oz, (20 + i * 11.7) * Math.PI / 180 + off, 6.2);
-        boss.fireT = 1.1; SND.enemyShot();
+        for (let i = 0; i < 7; i++) fireEnemy(ox, oz, (30 + i * 20) * Math.PI / 180 + off, 5.6);
+        boss.fireT = 1.6; SND.enemyShot();
       } else {
         boss.spin += 0.32;
-        for (let q = 0; q < 3; q++) fireEnemy(ox, oz, boss.spin + q * Math.PI * 2 / 3, 5.8);
-        boss.fireT = 0.12;
+        for (let q = 0; q < 2; q++) fireEnemy(ox, oz, boss.spin + q * Math.PI, 5.2);
+        boss.fireT = 0.2;
       }
     }
     if (half) {
@@ -1472,7 +1466,7 @@ function updateBoss(dt) {
       after(2.8, () => showResult(true));
     }
   }
-  const BS = 1.22, s = 1 + boss.squash * 0.12, w = Math.sin(boss.t * 3) * 0.03;
+  const BS = 1.08, s = 1 + boss.squash * 0.12, w = Math.sin(boss.t * 3) * 0.03;
   boss.mesh.scale.set((s + w) * BS, (1 - boss.squash * 0.12 - w) * BS, (s + w) * BS);
   boss.mesh.position.set(boss.x, Math.sin(boss.t * 2) * 0.3, boss.z);
   boss.mesh.rotation.y = Math.sin(boss.t * 0.8) * 0.15;
@@ -1543,6 +1537,7 @@ function updateBullets(dt) {
     if (c.z < FIELD.zTop - 3) { c.active = false; c.mesh.visible = false; }
   }
   // 敵の弾
+  ebCount = 0; for (const b of eBullets) if (b.active) ebCount++;
   const hr = CONFIG.hitRadius + 0.3;
   for (const b of eBullets) {
     if (!b.active) continue;
@@ -1617,7 +1612,7 @@ function updateItems(dt) {
     const m = it.mesh;
     m.position.set(it.x, 0.6 + Math.sin(it.t * 4) * 0.18, it.z);
     m.userData.inner.rotation.y = Math.sin(it.t * 2) * 0.6;
-    m.scale.setScalar(pop * (1.5 + Math.sin(it.t * 6) * 0.06));
+    m.scale.setScalar(pop * (1.25 + Math.sin(it.t * 6) * 0.05));
     m.userData.glow.scale.setScalar(1 + Math.sin(it.t * 5) * 0.12);
     m.userData.glow.material.opacity = 0.35 + Math.sin(it.t * 5) * 0.15;
     if (m.userData.spark) m.userData.spark.scale.setScalar(0.1 + Math.random() * 0.08);
@@ -1732,9 +1727,9 @@ function syncInstances() {
     if (!b.active) continue;
     const pul = 1 + Math.sin(b.t * 12) * 0.08;
     dummy.rotation.set(b.t * 2.5, b.t * 4, 0);
-    dummy.position.set(b.x, 0.4, b.z); dummy.scale.setScalar(0.4); dummy.updateMatrix(); eBulletOut.setMatrixAt(c, dummy.matrix);
-    dummy.scale.setScalar(0.33); dummy.updateMatrix(); eBulletBody.setMatrixAt(c, dummy.matrix);
-    dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.62 * pul); dummy.updateMatrix(); eBulletHi.setMatrixAt(c, dummy.matrix);
+    dummy.position.set(b.x, 0.4, b.z); dummy.scale.setScalar(0.33); dummy.updateMatrix(); eBulletOut.setMatrixAt(c, dummy.matrix);
+    dummy.scale.setScalar(0.27); dummy.updateMatrix(); eBulletBody.setMatrixAt(c, dummy.matrix);
+    dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.5 * pul); dummy.updateMatrix(); eBulletHi.setMatrixAt(c, dummy.matrix);
     c++;
   }
   eBulletOut.count = eBulletBody.count = eBulletHi.count = c;
@@ -1746,8 +1741,8 @@ function syncInstances() {
     const pop = Math.min(1, s.t / 0.15);
     dummy.position.set(s.x, 0.45 + Math.sin(s.t * 5 + s.seed) * 0.12, s.z);
     dummy.rotation.set(0.5, s.spin, 0);
-    dummy.scale.setScalar(pop * 1.3); dummy.updateMatrix(); starMesh.setMatrixAt(c, dummy.matrix);
-    dummy.scale.setScalar(pop * 1.56); dummy.updateMatrix(); starOut.setMatrixAt(c, dummy.matrix);
+    dummy.scale.setScalar(pop * 1.05); dummy.updateMatrix(); starMesh.setMatrixAt(c, dummy.matrix);
+    dummy.scale.setScalar(pop * 1.26); dummy.updateMatrix(); starOut.setMatrixAt(c, dummy.matrix);
     c++;
   }
   starMesh.count = starOut.count = c;
