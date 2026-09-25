@@ -198,7 +198,7 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
 </style>
 </head>
 <body>
-<!-- build: 2026-09-25 v1.5 -->
+<!-- build: 2026-09-25 v1.6 -->
 <canvas id="c"></canvas>
 <svg id="frame" aria-hidden="true"><defs><pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse"><rect width="28" height="28" fill="#ffe3f1"/><circle cx="7" cy="7" r="4" fill="#ffc9e2"/><circle cx="21" cy="21" r="4" fill="#d6ecff"/></pattern></defs><path id="frameFill" fill="url(#dots)" fill-rule="evenodd"/><path id="frameEdge" fill="none" stroke="#3b2f55" stroke-width="5" stroke-linejoin="round"/></svg>
 <div id="feverFx"></div>
@@ -239,7 +239,7 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
   <div class="sub-copy">そらの ぷにぷにを ポンッと はじけさせよう！</div>
   <button class="btn" id="btnStart">スタート</button>
   <div class="title-row"><button class="btn sub small" id="btnSound">おと：オン</button></div>
-  <div class="ver">v1.5 / 2026-09-25</div>
+  <div class="ver">v1.6 / 2026-09-25</div>
 </div>
 
 <!-- あそびかた -->
@@ -1145,7 +1145,7 @@ function fireKind(kind, idx) {
   const px = player.x, pz = player.z - 1.8, sp = CONFIG.bulletSpeed;
   if (kind === 'normal') addBullet('normal', px, pz, 0, -sp);
   else if (kind === 'spread') {
-    for (const deg of [-30, -15, 0, 15, 30]) { const a = deg * Math.PI / 180; addBullet('spread', px, pz, Math.sin(a) * 26, -Math.cos(a) * 26, { dmg: 0.6, life: 0.85 }); }
+    for (const deg of [-20, 0, 20]) { const a = deg * Math.PI / 180; addBullet('spread', px, pz, Math.sin(a) * 26, -Math.cos(a) * 26, { dmg: 0.8, life: 0.85 }); }   // 3方向
   } else if (kind === 'laser') addBullet('laser', px, pz - 0.6, 0, -55, { dmg: 1.5, pierce: true, r: 0.35, life: 0.7 });
   else if (kind === 'homing') { for (const s of [-1, 1]) addBullet('homing', px + s * 0.9, player.z - 0.6, s * 9, -14, { homing: true, dmg: 1.4, life: 2.2 }); }
   else if (kind === 'ball') {
