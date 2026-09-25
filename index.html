@@ -53,12 +53,12 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
 /* あそびかた */
 #howto{background:rgba(255,240,250,.55)}
 .howto-box{width:min(96vw,1120px);max-height:96vh;background:#fff;border:5px solid var(--ink);border-radius:32px;
-  padding:1.8vh 2.2vh 2.2vh;display:flex;flex-direction:column;align-items:center;gap:1.4vh;box-shadow:0 10px 0 rgba(59,47,85,.25)}
-.howto-title{font-size:max(26px,4.6vh);font-weight:700;color:var(--pink);text-shadow:0 3px 0 #ffd0e6}
+  padding:1.4vh 2.2vh 1.8vh;display:flex;flex-direction:column;align-items:center;gap:1vh;box-shadow:0 10px 0 rgba(59,47,85,.25)}
+.howto-title{font-size:max(24px,4vh);font-weight:700;color:var(--pink);text-shadow:0 3px 0 #ffd0e6}
 .howto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2vh;width:100%}
-.card{display:flex;align-items:center;gap:1.4vh;background:#fff6fb;border:3px solid #ffd0e6;border-radius:20px;padding:1.1vh 1.4vh;min-height:13vh}
-.card .ic{flex:0 0 12vh;height:11vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4vh}
-.card .tx{font-size:max(13px,2.2vh);line-height:1.45;word-break:keep-all;overflow-wrap:anywhere}
+.card{display:flex;align-items:center;gap:1.4vh;background:#fff6fb;border:3px solid #ffd0e6;border-radius:20px;padding:.8vh 1.4vh;min-height:10.5vh}
+.card .ic{flex:0 0 11vh;height:9vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4vh}
+.card .tx{font-size:max(13px,2.05vh);line-height:1.4;word-break:keep-all;overflow-wrap:anywhere}
 .card .tx b{display:block;font-size:max(15px,2.7vh);color:var(--ink);margin-bottom:.2vh}
 .mini-stick{width:9vh;height:9vh;border-radius:50%;background:#e8e4f5;border:3px solid #b7add6;position:relative}
 .mini-stick i{position:absolute;width:4.4vh;height:4.4vh;border-radius:50%;left:50%;top:50%;margin:-2.2vh 0 0 -2.2vh;
@@ -78,13 +78,21 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
 .mini-gauge{width:10vh;height:2.2vh;border:3px solid var(--ink);border-radius:10px;overflow:hidden;background:#fff}
 .mini-gauge i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ffd84d,#ff9660,#ff5fa2,#9b7bff,#6ecbff);animation:gfill 2.4s ease-in-out infinite}
 @keyframes gfill{0%{width:10%}80%,100%{width:100%}}
-.items-row{width:100%;display:flex;align-items:stretch;gap:1vh;background:#f2fbff;border:3px solid #c4ecff;border-radius:20px;padding:1vh 1.4vh}
+.items-row{width:100%;display:flex;align-items:stretch;gap:1vh;background:#f2fbff;border:3px solid #c4ecff;border-radius:20px;padding:.6vh 1.4vh}
 .items-row .lbl{writing-mode:vertical-rl;font-weight:700;font-size:max(13px,2.1vh);color:#2b7fb8;display:flex;align-items:center;justify-content:center}
 .it{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:.2vh}
 .it span{font-size:max(22px,4.4vh);line-height:1.1}
+.it svg{width:max(30px,5.2vh);height:max(30px,5.2vh);flex:none}
+.items-row.weapons{background:#fff9ec;border-color:#ffe3a6}
+.items-row.weapons .lbl{color:#d9822b}
+.wnote{font-size:max(12px,1.9vh);font-weight:700;color:#d9822b;margin-top:-.4vh}
+#powerLv{display:flex;align-items:center;gap:8px}
+#powerLv .wbar{width:74px;height:10px;border-radius:6px;background:#e6e1f2;overflow:hidden}
+#powerLv .wbar b{display:block;height:100%;width:100%;background:var(--wc,#ff5fa2)}
+#powerLv.normal .wbar{display:none}
 .it b{font-size:max(13px,2.2vh)}
 .it small{font-size:max(11px,1.8vh);opacity:.8;word-break:keep-all;line-height:1.3}
-#btnGo{margin-top:.4vh}
+#btnGo{margin-top:.2vh;min-height:56px;padding:10px 54px;font-size:28px}
 
 /* ---------- HUD ---------- */
 #hud{position:fixed;inset:0;pointer-events:none;z-index:11}
@@ -177,7 +185,7 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
 </style>
 </head>
 <body>
-<!-- build: 2026-09-25 v1.1 -->
+<!-- build: 2026-09-25 v1.3 -->
 <canvas id="c"></canvas>
 <div id="feverFx"></div>
 
@@ -191,7 +199,7 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
 <!-- HUD -->
 <div id="hud" class="hidden">
   <div id="hearts"></div>
-  <div id="powerLv">パワー Lv1</div>
+  <div id="powerLv" class="normal"><span id="wName">ふつうショット</span><div class="wbar"><b id="wFill"></b></div></div>
   <div id="speedLv">スピード Lv1</div>
   <div id="status">
     <div class="stat hidden" id="st-shield">🛡️<div class="bar"><b></b></div></div>
@@ -217,7 +225,7 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
   <div class="sub-copy">そらの ぷにぷにを ポンッと はじけさせよう！</div>
   <button class="btn" id="btnStart">スタート</button>
   <div class="title-row"><button class="btn sub small" id="btnSound">おと：オン</button></div>
-  <div class="ver">v1.1 / 2026-09-25</div>
+  <div class="ver">v1.3 / 2026-09-25</div>
 </div>
 
 <!-- あそびかた -->
@@ -238,9 +246,16 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
       <div class="card"><div class="ic"><div class="mini-gauge"><i></i></div><div class="tata">⭐⭐⭐</div></div>
         <div class="tx"><b>フィーバー</b>⭐を あつめて ゲージが いっぱいに なると さいきょう パワー！</div></div>
     </div>
+    <div class="items-row weapons">
+      <div class="lbl">ぶき</div>
+      <div class="it"><svg viewBox="-20 -20 40 40"><g fill="#ff6fb1" stroke="#3b2f55" stroke-width="2.2" stroke-linejoin="round"><polygon points="0,-17 5,-4 -5,-4" transform="rotate(-32 0 12)"/><polygon points="0,-17 5,-4 -5,-4"/><polygon points="0,-17 5,-4 -5,-4" transform="rotate(32 0 12)"/></g><circle cx="0" cy="12" r="5" fill="#fff" stroke="#3b2f55" stroke-width="2.2"/></svg><b>ひろがり</b><small>よこに ひろがる</small></div>
+      <div class="it"><svg viewBox="-20 -20 40 40"><rect x="-9" y="-19" width="18" height="38" rx="9" fill="#39c6ff" opacity=".35"/><rect x="-4.5" y="-18" width="9" height="36" rx="4.5" fill="#39c6ff" stroke="#3b2f55" stroke-width="2.2"/><rect x="-1.5" y="-15" width="3" height="30" rx="1.5" fill="#fff"/></svg><b>レーザー</b><small>つらぬいて かたい てきに つよい</small></div>
+      <div class="it"><svg viewBox="-20 -20 40 40"><g stroke="#3b2f55" stroke-width="2.2" stroke-linejoin="round"><polygon points="-9,16 -5,6 -5,14" fill="#1f9e5a"/><polygon points="9,16 5,6 5,14" fill="#1f9e5a"/><rect x="-5" y="-6" width="10" height="20" rx="2" fill="#3fd07a"/><polygon points="0,-18 5,-6 -5,-6" fill="#1f9e5a"/></g><circle cx="0" cy="2" r="2.5" fill="#fff"/></svg><b>おいかけ</b><small>てきを おいかける</small></div>
+      <div class="it"><svg viewBox="-20 -20 40 40"><circle r="15" fill="#ff9660" stroke="#3b2f55" stroke-width="2.2"/><path d="M-14,-4 Q0,6 14,-4" stroke="#fff" stroke-width="4" fill="none"/><circle cx="-5" cy="-8" r="3" fill="#fff" opacity=".8"/></svg><b>ボール</b><small>はずんで まとめて たおす</small></div>
+    </div>
+    <div class="wnote">ぶきは 15びょうで ふつうに もどるよ。てきに あたっても もどるよ。</div>
     <div class="items-row">
       <div class="lbl">アイテム</div>
-      <div class="it"><span>🍭</span><b>キャンディ</b><small>パワーアップ</small></div>
       <div class="it"><span>❤️</span><b>ハート</b><small>ハートが ふえる</small></div>
       <div class="it"><span>🛡️</span><b>シールド</b><small>しばらく むてき</small></div>
       <div class="it"><span>💣</span><b>ボム</b><small>ボムが ふえる</small></div>
@@ -314,11 +329,12 @@ const CONFIG = {
   // --- アイテム ---
   shieldTime: 8,          // シールドの時間（秒）
   magnetTime: 10,         // マグネットの時間（秒）
-  itemDropRate: { drop: 0.12, wave: 0.15, shooter: 0.3, big: 1 }, // 敵ごとのアイテムが出る確率
-  itemWeights: { candy: 34, heart: 8, shield: 12, bomb: 11, magnet: 14, speed: 22 }, // アイテムの出やすさ
+  itemDropRate: { drop: 0.07, wave: 0.1, shooter: 0.3, big: 1 }, // 敵ごとのアイテムが出る確率
+  itemWeights: { spread: 13, laser: 13, homing: 13, ball: 13, heart: 9, shield: 10, bomb: 10, magnet: 12, speed: 16 },
+  weaponTime: 15,         // ぶきが続く時間（秒）。同じぶきを取ると時間がもどる // アイテムの出やすさ
   // --- フィーバー ---
   feverTime: 10,          // フィーバーの長さ（秒）
-  feverPerStar: 2,        // 星1つでたまるゲージ（100で満タン）
+  feverPerStar: 1,        // 星1つでたまるゲージ（100で満タン）
   // --- 演出 ---
   hitStopSmall: 0.035,    // 小さい敵を倒したときのヒットストップ（秒）
   hitStopBig: 0.07,       // 大きい敵
@@ -327,7 +343,7 @@ const CONFIG = {
   comboWindow: 1.6,       // コンボが続く時間（秒）
   // --- 難易度 ---
   enemyBulletSpeed: 7.5,  // 敵の弾の速さ
-  bossHP: 800,            // ボスの体力
+  bossHP: 450,            // ボスの体力
   shooterInterval: 1.4,   // 弾をうつ敵の発射間隔（秒）
   bigInterval: 2.0,       // 大きい敵の発射間隔（秒）
   waveShootRate: 0.5,     // ゆれる敵が弾をうつ確率（0〜1）
@@ -513,15 +529,19 @@ let flameOuter, flameInner, coreMesh, coreRing, shieldMesh, chargeOrb, chargeRin
     new THREE.MeshBasicMaterial({ color: 0xffd84d, transparent: true, depthWrite: false }));
   chargeRing.visible = false; playerRoot.add(chargeRing);
 }
+// 今のぶきの色で自機のまわりに光るわっか
+const weaponRing = new THREE.Mesh(new THREE.RingGeometry(1.55, 1.8, 40).rotateX(-Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false }));
+weaponRing.position.y = 0.05; weaponRing.visible = false; playerRoot.add(weaponRing);
 
 // ---------------------------------------------------------------------
 //  敵
 // ---------------------------------------------------------------------
 const ENEMY_DEF = {
   drop:    { hp: 1,  r: 1.05,  color: 0x6fe3c4, score: 100,  stars: 2,  speed: 7.0 },
-  wave:    { hp: 2,  r: 1.1, color: 0xffcf4a, score: 150,  stars: 3,  speed: 5.5 },
-  shooter: { hp: 4,  r: 1.3,  color: 0xb08cff, score: 300,  stars: 4,  speed: 6.0 },
-  big:     { hp: 24, r: 2.2,  color: 0xff9660, score: 1000, stars: 10, speed: 2.4 },
+  wave:    { hp: 3,  r: 1.1, color: 0xffcf4a, score: 150,  stars: 3,  speed: 5.5 },
+  shooter: { hp: 8,  r: 1.3,  color: 0xb08cff, score: 300,  stars: 4,  speed: 6.0 },
+  big:     { hp: 32, r: 2.2,  color: 0xff9660, score: 1000, stars: 10, speed: 2.4 },
 };
 function addFace(parent, r, eyeSize = 0.24) {
   const eyeR = eyeSize * r;
@@ -613,7 +633,7 @@ const dummy = new THREE.Object3D();
 const tmpColor = new THREE.Color();
 const PB_N = 320, EB_N = 280, PART_N = 900, STAR_N = 320;
 
-const pBullets = makePool(PB_N, () => ({ active: false, x: 0, z: 0, vx: 0, vz: 0, homing: false, life: 0 }));
+const pBullets = makePool(PB_N, () => ({ active: false, x: 0, z: 0, vx: 0, vz: 0, homing: false, life: 0, kind: 'normal', dmg: 1, r: 0.3, pierce: false, sp: 32, hits: new Set() }));
 const pBulletMesh = new THREE.InstancedMesh(sphereLo, new THREE.MeshBasicMaterial({ color: 0xffffff }), PB_N);
 const pBulletGlow = new THREE.InstancedMesh(sphereLo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false }), PB_N);
 [pBulletMesh, pBulletGlow].forEach(m => { m.frustumCulled = false; m.count = 0; scene.add(m); });
@@ -680,7 +700,7 @@ const starOut = new THREE.InstancedMesh(starGeo, OUTLINE, STAR_N);
 // ---------------------------------------------------------------------
 //  アイテム
 // ---------------------------------------------------------------------
-const ITEM_NAMES = { candy: 'パワーアップ！', heart: 'ハート かいふく！', shield: 'シールド！', bomb: 'ボム +1！', magnet: 'マグネット！', speed: 'スピードアップ！' };
+const ITEM_NAMES = { spread: 'ひろがりショット！', laser: 'レーザー！', homing: 'おいかけショット！', ball: 'でっかいボール！', candy: 'パワーアップ！', heart: 'ハート かいふく！', shield: 'シールド！', bomb: 'ボム +1！', magnet: 'マグネット！', speed: 'スピードアップ！' };
 const glowGeo = new THREE.CircleGeometry(0.95, 28).rotateX(-Math.PI / 2);
 function buildItemMesh(type) {
   const g = new THREE.Group();
@@ -692,6 +712,40 @@ function buildItemMesh(type) {
     }
     const stick = withOutline(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.7, 8), whiteT), 1.25);
     stick.rotation.x = Math.PI / 2; stick.position.z = 0.8; inner.add(stick);
+  } else if (type === 'spread') {
+    // 3本の矢が扇形に広がる
+    const m = toon(0xff6fb1);
+    for (const a of [-0.5, 0, 0.5]) {
+      const arm = new THREE.Group(); arm.rotation.y = -a; inner.add(arm);
+      const tip = withOutline(new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.45, 12), m), 1.15);
+      tip.rotation.x = -Math.PI / 2; tip.position.z = -0.62; arm.add(tip);
+      const rod = withOutline(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.5, 8), m), 1.3);
+      rod.rotation.x = Math.PI / 2; rod.position.z = -0.2; arm.add(rod);
+    }
+    const hub = withOutline(new THREE.Mesh(sphereLo, whiteT), 1.12); hub.scale.setScalar(0.2); hub.position.z = 0.1; inner.add(hub);
+  } else if (type === 'laser') {
+    // 光る水色のぼう
+    const bar = withOutline(new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.9, 6, 14), toon(0x39c6ff, { emissive: 0x39c6ff, emissiveIntensity: 0.35 })), 1.12);
+    bar.rotation.x = Math.PI / 2; inner.add(bar);
+    const core = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.9, 4, 8), eyeWhite); core.rotation.x = Math.PI / 2; core.position.y = 0.2; inner.add(core);
+    const aura = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.9, 6, 14), new THREE.MeshBasicMaterial({ color: 0x39c6ff, transparent: true, opacity: 0.3, depthWrite: false }));
+    aura.rotation.x = Math.PI / 2; inner.add(aura);
+  } else if (type === 'homing') {
+    // みどりの小さなミサイル
+    const body = withOutline(new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.7, 14), toon(0x3fd07a)), 1.12);
+    body.rotation.x = Math.PI / 2; inner.add(body);
+    const nose = withOutline(new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.4, 14), toon(0x1f9e5a)), 1.12);
+    nose.rotation.x = -Math.PI / 2; nose.position.z = -0.55; inner.add(nose);
+    for (const sx of [-1, 1]) {
+      const fin = withOutline(new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.06, 0.22), toon(0x1f9e5a)), 1.15);
+      fin.position.set(sx * 0.3, 0, 0.3); inner.add(fin);
+    }
+    const eye = new THREE.Mesh(sphereLo, eyeWhite); eye.scale.setScalar(0.08); eye.position.set(0, 0.2, -0.05); inner.add(eye);
+  } else if (type === 'ball') {
+    // はずむオレンジのボール
+    const b = withOutline(new THREE.Mesh(sphereGeo, toon(0xff9660)), 1.08); b.scale.setScalar(0.5); inner.add(b);
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.06, 8, 32), whiteT); band.rotation.x = 0.5; inner.add(band);
+    const hi = new THREE.Mesh(sphereLo, eyeWhite); hi.scale.setScalar(0.1); hi.position.set(-0.18, 0.4, 0.05); inner.add(hi);
   } else if (type === 'heart') {
     const hs = new THREE.Shape();
     hs.moveTo(25, 25); hs.bezierCurveTo(25, 25, 20, 0, 0, 0); hs.bezierCurveTo(-30, 0, -30, 35, -30, 35);
@@ -729,6 +783,7 @@ function buildItemMesh(type) {
   }
   const glow = new THREE.Mesh(glowGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false }));
   glow.position.y = -0.45; g.add(glow); g.userData.glow = glow; g.userData.inner = inner;
+  if (['spread', 'laser', 'homing', 'ball'].includes(type)) inner.scale.setScalar(1.35);
   g.visible = false; scene.add(g);
   return g;
 }
@@ -872,7 +927,7 @@ let cheatInv = false;
 const timers = [];
 const after = (t, fn) => timers.push({ t, fn });
 
-const player = { x: 0, z: 8, hp: 3, level: 1, speedLv: 1, bombs: 2, inv: 0, shield: 0, magnet: 0, alive: true, tilt: 0, vx: 0, vz: 0 };
+const player = { x: 0, z: 8, hp: 3, level: 1, weapon: 'normal', weaponT: 0, speedLv: 1, bombs: 2, inv: 0, shield: 0, magnet: 0, alive: true, tilt: 0, vx: 0, vz: 0 };
 const shot = { burstLeft: 0, burstTimer: 0, cooldown: 0, held: false, heldTime: 0, charge: 0, charged: false };
 const input = { sx: 0, sy: 0, ax: 0, ay: 0, keys: {} };
 
@@ -970,7 +1025,7 @@ function spawnEnemy(type, x, z = SPAWN_Z) {
   if (!e) { e = createEnemy(type); enemies.push(e); }
   const d = ENEMY_DEF[type];
   Object.assign(e, { active: true, x, z, x0: x, hp: d.hp, t: 0, flash: 0, squash: 0,
-    fireT: type === 'big' ? 1.2 : 0.7, willShoot: type === 'wave' && Math.random() < CONFIG.waveShootRate, phase: 'in', targetZ: rand(-11, -6), stayT: 0, ph: rand(0, 6.28) });
+    fireT: type === 'big' ? 0.5 : 0.35, willShoot: type === 'wave' && Math.random() < CONFIG.waveShootRate, phase: 'in', targetZ: rand(-11, -6), stayT: 0, ph: rand(0, 6.28) });
   e.mesh.visible = true; e.mesh.position.set(x, 0, z);
   return e;
 }
@@ -1012,7 +1067,6 @@ function spawnStars(x, z, n, spread = 1) {
 function pickItemType() {
   const w = { ...CONFIG.itemWeights };
   if (player.hp >= CONFIG.maxHP) w.heart *= 0.3;
-  if (player.level >= 5) w.candy *= 0.4;
   if (player.bombs >= CONFIG.maxBombs) w.bomb *= 0.4;
   if (player.speedLv >= CONFIG.maxSpeedLv) w.speed *= 0.3;
   let sum = 0; for (const k in w) sum += w[k];
@@ -1050,34 +1104,45 @@ function banner(str, cls = '') {
 // ---------------------------------------------------------------------
 //  ショット
 // ---------------------------------------------------------------------
-const PATTERNS = {
-  1: [[0, 0]],
-  2: [[0, -0.35], [0, 0.35]],
-  3: [[-9, 0], [0, 0], [9, 0]],
-  4: [[-18, 0], [-8, 0], [0, 0], [8, 0], [18, 0]],
-  5: [[-18, 0], [-8, 0], [0, 0], [8, 0], [18, 0]],
+// ぶきの設定（名前・色）
+const WEAPONS = {
+  normal: { name: 'ふつうショット', color: '#ffb347' },
+  spread: { name: 'ひろがりショット', color: '#ff6fb1' },
+  laser:  { name: 'レーザー', color: '#39c6ff' },
+  homing: { name: 'おいかけショット', color: '#3fd07a' },
+  ball:   { name: 'でっかいボール', color: '#ff9660' },
 };
-function curLevel() { return feverActive ? 5 : player.level; }
-function fireVolley() {
+let ballFlip = 1;
+function addBullet(kind, x, z, vx, vz, o = {}) {
+  const b = take(pBullets); if (!b) return null;
+  b.active = true; b.kind = kind; b.x = x; b.z = z; b.vx = vx; b.vz = vz;
+  b.homing = !!o.homing; b.pierce = !!o.pierce; b.dmg = o.dmg ?? 1; b.r = o.r ?? 0.3; b.life = o.life ?? 1.2;
+  b.sp = Math.hypot(vx, vz); b.hits.clear();
+  return b;
+}
+function fireKind(kind, idx) {
+  const px = player.x, pz = player.z - 1.8, sp = CONFIG.bulletSpeed;
+  if (kind === 'normal') addBullet('normal', px, pz, 0, -sp);
+  else if (kind === 'spread') {
+    for (const deg of [-30, -15, 0, 15, 30]) { const a = deg * Math.PI / 180; addBullet('spread', px, pz, Math.sin(a) * 26, -Math.cos(a) * 26, { dmg: 0.6, life: 0.85 }); }
+  } else if (kind === 'laser') addBullet('laser', px, pz - 0.6, 0, -55, { dmg: 1.5, pierce: true, r: 0.35, life: 0.7 });
+  else if (kind === 'homing') { for (const s of [-1, 1]) addBullet('homing', px + s * 0.9, player.z - 0.6, s * 9, -14, { homing: true, dmg: 1.4, life: 2.2 }); }
+  else if (kind === 'ball') {
+    if (idx !== 0) return;   // ボールは1回押すと1こだけ
+    ballFlip = -ballFlip;
+    addBullet('ball', px, pz, ballFlip * 7, -16, { dmg: 3, pierce: true, r: 0.75, life: 2.4 });
+  }
+}
+function fireVolley(idx = 0) {
   if (!player.alive) return;
-  const lv = curLevel();
-  for (const [deg, dx] of PATTERNS[lv]) {
-    const b = take(pBullets); if (!b) break;
-    const a = deg * Math.PI / 180;
-    b.active = true; b.homing = false; b.life = 1.2;
-    b.x = player.x + dx; b.z = player.z - 1.8;
-    b.vx = Math.sin(a) * CONFIG.bulletSpeed; b.vz = -Math.cos(a) * CONFIG.bulletSpeed;
-  }
-  if (lv >= 5) {
-    for (const s of [-1, 1]) {
-      const b = take(pBullets); if (!b) break;
-      b.active = true; b.homing = true; b.life = 2.0;
-      b.x = player.x + s * 0.8; b.z = player.z - 0.4;
-      b.vx = s * 10; b.vz = -18;
-    }
-  }
+  if (feverActive) { fireKind('spread', idx); fireKind('laser', idx); fireKind('homing', idx); }
+  else fireKind(player.weapon, idx);
   burst(player.x, 0.3, player.z - 2.2, [0xfff27a, 0xffffff], 2, 3, 0.14, 0.15, 0);
   SND.shot();
+}
+function setWeapon(kind) {
+  player.weapon = kind; player.weaponT = kind === 'normal' ? 0 : CONFIG.weaponTime;
+  weaponRing.material.color.set(WEAPONS[kind].color);
 }
 function shotPress() {
   if (!isPlayable()) return;
@@ -1115,7 +1180,7 @@ function updateShot(dt) {
   if (shot.burstLeft > 0) {
     shot.burstTimer -= dt;
     if (shot.burstTimer <= 0) {
-      fireVolley(); shot.burstLeft--; shot.burstTimer += CONFIG.burstInterval;
+      fireVolley(CONFIG.burstCount - shot.burstLeft); shot.burstLeft--; shot.burstTimer += CONFIG.burstInterval;
       if (shot.burstLeft === 0) shot.cooldown = CONFIG.burstCooldown * (feverActive ? CONFIG.feverCooldownRate : 1);
     }
   } else if (shot.cooldown > 0) shot.cooldown -= dt;
@@ -1139,7 +1204,7 @@ function useBomb() {
 }
 function hurtPlayer() {
   if (!player.alive || player.inv > 0 || player.shield > 0 || cheatInv) return;
-  player.hp--; player.level = Math.max(1, player.level - 1);
+  player.hp--; if (player.weapon !== 'normal') setWeapon('normal');
   player.inv = CONFIG.invincibleTime;
   SND.damage(); addShake(0.9); dmgV = 1;
   burst(player.x, 0.4, player.z, [0xff5fa2, 0xffffff, 0xffd84d], 22, 9, 0.22, 0.5);
@@ -1235,6 +1300,10 @@ function updatePlayer(dt) {
   player.inv = Math.max(0, player.inv - dt);
   player.shield = Math.max(0, player.shield - dt);
   player.magnet = Math.max(0, player.magnet - dt);
+  if (player.weapon !== 'normal') {
+    player.weaponT -= dt;
+    if (player.weaponT <= 0) { setWeapon('normal'); popText(player.x, player.z - 1.8, 'ふつうに もどった', '', 1.0, 2); }
+  }
 }
 
 function updateSpawns(dt) {
@@ -1274,22 +1343,27 @@ function updateEnemies(dt) {
         break;
       case 'wave':
         e.z += d.speed * dt; e.x = e.x0 + Math.sin(e.t * 2.2 + e.ph) * 3.6;
-        if (e.willShoot && e.z > -9 && player.alive) { e.willShoot = false; fireEnemy(e.x, e.z + 0.8, aimAt(e.x, e.z), CONFIG.enemyBulletSpeed * 0.9); SND.enemyShot(); }
+        if (e.willShoot && e.z > FIELD.zTop + 1.5 && player.alive) { e.willShoot = false; fireEnemy(e.x, e.z + 0.8, aimAt(e.x, e.z), CONFIG.enemyBulletSpeed * 0.9); SND.enemyShot(); }
         break;
       case 'shooter':
         if (e.phase === 'in') {
           e.z += Math.max(1.5, (e.targetZ - e.z) * 2.2) * dt;
+          if (e.z > FIELD.zTop) e.fireT -= dt;   // 画面に入ったら入りながらでも撃つ
           if (e.z >= e.targetZ - 0.1) e.phase = 'stay';
-        } else if (e.phase === 'stay') {
+        }
+        if (e.phase === 'stay') {
           e.stayT += dt; e.x += Math.sin(e.t * 1.3) * dt * 2.4;
           e.fireT -= dt;
+        }
+        if (e.phase !== 'out' && e.z > FIELD.zTop) {
           if (e.fireT <= 0 && player.alive) { const a = aimAt(e.x, e.z); for (const k of (stageTime > 45 ? [-1, 0, 1] : [0])) fireEnemy(e.x, e.z + 0.8, a + k * 0.28, CONFIG.enemyBulletSpeed); SND.enemyShot(); e.fireT = CONFIG.shooterInterval; }
           if (e.stayT > 7) e.phase = 'out';
-        } else e.z += 7 * dt;
+        }
+        if (e.phase === 'out') e.z += 7 * dt;
         break;
       case 'big':
         e.z += d.speed * dt;
-        if (e.z > -13 && e.z < 4) {
+        if (e.z > FIELD.zTop && e.z < 4) {
           e.fireT -= dt;
           if (e.fireT <= 0 && player.alive) {
             const a = aimAt(e.x, e.z);
@@ -1378,7 +1452,7 @@ function updateBoss(dt) {
 
 function nearestTarget(x, z) {
   let best = null, bd = 1e9;
-  for (const e of enemies) if (e.active && e.z > FIELD.zTop - 2) { const d = (e.x - x) ** 2 + (e.z - z) ** 2; if (d < bd) { bd = d; best = e; } }
+  for (const e of enemies) if (e.active && e.z > FIELD.zTop) { const d = (e.x - x) ** 2 + (e.z - z) ** 2; if (d < bd) { bd = d; best = e; } }
   if (boss.active && boss.phase === 'fight') { const d = (boss.x - x) ** 2 + (boss.z - z) ** 2; if (d < bd) best = boss; }
   return best;
 }
@@ -1393,25 +1467,28 @@ function updateBullets(dt) {
         const cur = Math.atan2(b.vz, b.vx), want = Math.atan2(t.z - b.z, t.x - b.x);
         let da = want - cur; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2;
         const na = cur + clamp(da, -7 * dt, 7 * dt);
-        b.vx = Math.cos(na) * 24; b.vz = Math.sin(na) * 24;
+        b.vx = Math.cos(na) * b.sp; b.vz = Math.sin(na) * b.sp;
       }
     }
     b.x += b.vx * dt; b.z += b.vz * dt;
-    if (b.life <= 0 || b.z < -26 || b.z > 16 || Math.abs(b.x) > 20) { b.active = false; continue; }
-    // 当たり判定
+    if (b.kind === 'ball' && Math.abs(b.x) > PB.x + 0.6) { b.x = Math.sign(b.x) * (PB.x + 0.6); b.vx = -b.vx; SND.hit(); }   // かべではね返る
+    if (b.life <= 0 || b.z < FIELD.zTop - 2 || b.z > 16 || Math.abs(b.x) > 20) { b.active = false; continue; }
+    // 当たり判定（レーザーとボールは貫通する）
     for (const e of enemies) {
-      if (!e.active) continue;
-      const r = ENEMY_DEF[e.type].r + 0.3;
+      if (!e.active || e.z < FIELD.zTop || b.hits.has(e)) continue;   // 画面に入るまでは当たらない
+      const r = ENEMY_DEF[e.type].r + b.r;
       if ((e.x - b.x) ** 2 + (e.z - b.z) ** 2 < r * r) {
-        b.active = false;
         burst(b.x, 0.3, b.z, [0xffffff, 0xfff27a], 3, 4, 0.12, 0.18);
-        damageEnemy(e, 1);
-        break;
+        if (b.pierce) b.hits.add(e); else b.active = false;
+        damageEnemy(e, b.dmg);
+        if (!b.pierce) break;
       }
     }
-    if (b.active && boss.active && boss.phase === 'fight') {
-      if ((boss.x - b.x) ** 2 + (boss.z - b.z) ** 2 < (boss.r + 0.3) ** 2) {
-        b.active = false; burst(b.x, 1, b.z, [0xffffff, 0xfff27a], 3, 4, 0.12, 0.18); damageBoss(1);
+    if (b.active && boss.active && boss.phase === 'fight' && !b.hits.has(boss)) {
+      if ((boss.x - b.x) ** 2 + (boss.z - b.z) ** 2 < (boss.r + b.r) ** 2) {
+        burst(b.x, 1, b.z, [0xffffff, 0xfff27a], 3, 4, 0.12, 0.18);
+        if (b.pierce) b.hits.add(boss); else b.active = false;
+        damageBoss(b.dmg);
       }
     }
   }
@@ -1425,7 +1502,7 @@ function updateBullets(dt) {
     }
     const R = CONFIG.chargeRadius;
     for (const e of enemies) {
-      if (!e.active || c.hits.has(e)) continue;
+      if (!e.active || c.hits.has(e) || e.z < FIELD.zTop) continue;
       const r = ENEMY_DEF[e.type].r + R;
       if ((e.x - c.x) ** 2 + (e.z - c.z) ** 2 < r * r) { c.hits.add(e); damageEnemy(e, CONFIG.chargeDamage); spawnRing(e.x, e.z, 0xffd84d, 0.3, 2.5, 0.25); }
     }
@@ -1434,7 +1511,7 @@ function updateBullets(dt) {
     }
     c.mesh.position.set(c.x, 0.3, c.z);
     c.ring.rotation.z += dt * 8; c.ring.scale.setScalar(1 + Math.sin(c.t * 30) * 0.08);
-    if (c.z < -28) { c.active = false; c.mesh.visible = false; }
+    if (c.z < FIELD.zTop - 3) { c.active = false; c.mesh.visible = false; }
   }
   // 敵の弾
   const hr = CONFIG.hitRadius + 0.3;
@@ -1471,6 +1548,10 @@ function collectItem(it) {
   burst(player.x, 0.5, player.z, [0xffd84d, 0xffffff, 0xff9ccb, 0x6ecbff], 14, 6, 0.18, 0.4);
   let label = ITEM_NAMES[it.type];
   switch (it.type) {
+    case 'spread': case 'laser': case 'homing': case 'ball':
+      if (player.weapon === it.type) label = WEAPONS[it.type].name + ' じかん のびた！';
+      setWeapon(it.type);
+      break;
     case 'candy':
       if (player.level < 5) { player.level++; label = player.level >= 5 ? 'パワー MAX！' : 'パワーアップ！ Lv' + player.level; }
       else { addScore(500); label = 'MAX ボーナス +500'; }
@@ -1593,16 +1674,25 @@ function updateParticles(dt) {
 // ---------------------------------------------------------------------
 //  描画用の同期
 // ---------------------------------------------------------------------
+// ぶきごとの弾の見た目 [しんの大きさ], [光の大きさ], しんの色, 光の色
+const BULLET_LOOK = {
+  normal: { core: [0.26, 0.26, 0.7], glow: [0.5, 0.36, 1.1], c1: 0xffffff, c2: 0xffa21f },
+  spread: { core: [0.2, 0.2, 0.45], glow: [0.4, 0.3, 0.7], c1: 0xffe0ef, c2: 0xff4f9a },
+  laser:  { core: [0.16, 0.16, 2.2], glow: [0.45, 0.3, 2.8], c1: 0xffffff, c2: 0x39c6ff },
+  homing: { core: [0.28, 0.28, 0.6], glow: [0.55, 0.4, 1.0], c1: 0xe0ffe9, c2: 0x2fbf6a },
+  ball:   { core: [0.62, 0.62, 0.62], glow: [0.9, 0.7, 0.9], c1: 0xffe6cc, c2: 0xff8a3d },
+};
 function syncInstances() {
   let c = 0;
   for (const b of pBullets) {
     if (!b.active) continue;
     dummy.position.set(b.x, 0.3, b.z);
     dummy.rotation.set(0, Math.atan2(b.vx, b.vz), 0);
-    dummy.position.y = 0.5; dummy.scale.set(0.26, 0.26, 0.7); dummy.updateMatrix(); pBulletMesh.setMatrixAt(c, dummy.matrix);
-    pBulletMesh.setColorAt(c, tmpColor.set(b.homing ? 0xffd0ea : 0xffffff));
-    dummy.position.y = 0.3; dummy.scale.set(0.5, 0.36, 1.1); dummy.updateMatrix(); pBulletGlow.setMatrixAt(c, dummy.matrix);
-    pBulletGlow.setColorAt(c, tmpColor.set(b.homing ? 0xff4f9a : 0xffa21f));
+    const L = BULLET_LOOK[b.kind] || BULLET_LOOK.normal;
+    dummy.position.y = 0.5; dummy.scale.set(...L.core); dummy.updateMatrix(); pBulletMesh.setMatrixAt(c, dummy.matrix);
+    pBulletMesh.setColorAt(c, tmpColor.set(L.c1));
+    dummy.position.y = 0.3; dummy.scale.set(...L.glow); dummy.updateMatrix(); pBulletGlow.setMatrixAt(c, dummy.matrix);
+    pBulletGlow.setColorAt(c, tmpColor.set(L.c2));
     c++;
   }
   pBulletMesh.count = pBulletGlow.count = c;
@@ -1651,6 +1741,9 @@ function syncPlayer(dt) {
   coreRing.scale.setScalar(1 + Math.sin(t * 8) * 0.15);
   shieldMesh.visible = player.alive && player.shield > 0 && (player.shield > 2 || Math.floor(t * 10) % 2 === 0);
   shieldMesh.rotation.y += dt * 2;
+  const armed = player.weapon !== 'normal' && player.alive && (state === 'playing' || state === 'boss');
+  weaponRing.visible = armed && (player.weaponT > 3 || Math.floor(t * 8) % 2 === 0);   // のこり3びょうで点めつ
+  weaponRing.rotation.y += dt * 2; weaponRing.scale.setScalar(1 + Math.sin(t * 6) * 0.04);
   const charging = shot.held && shot.charge > 0 && player.alive;
   chargeOrb.visible = charging; chargeRing.visible = charging;
   if (charging) {
@@ -1685,7 +1778,7 @@ const hudCache = {};
 function setHTML(el, key, v) { if (hudCache[key] !== v) { hudCache[key] = v; el.innerHTML = v; } }
 let comboPop = false;
 const el = {
-  hearts: $('hearts'), power: $('powerLv'), speed: $('speedLv'), score: $('score'), feverFill: $('feverFill'), feverBar: $('feverBar'),
+  hearts: $('hearts'), power: $('powerLv'), wName: $('wName'), wFill: $('wFill'), speed: $('speedLv'), score: $('score'), feverFill: $('feverFill'), feverBar: $('feverBar'),
   combo: $('combo'), bossFill: $('bossFill'), bombCount: $('bombCount'), btnBomb: $('btnBomb'), btnShot: $('btnShot'),
   stShield: $('st-shield'), stMagnet: $('st-magnet'), flash: $('flash'), dmg: $('dmgFx'),
 };
@@ -1693,11 +1786,13 @@ function updateHUD(dt) {
   let h = '';
   for (let i = 0; i < CONFIG.maxHP; i++) h += i < player.hp ? '❤️' : '🤍';
   setHTML(el.hearts, 'h', h);
-  const lv = curLevel();
-  setHTML(el.power, 'p', lv >= 5 ? 'パワー MAX' : 'パワー Lv' + lv);
+  const wk = feverActive ? null : player.weapon;
+  setHTML(el.wName, 'w', feverActive ? 'さいきょうモード！' : WEAPONS[wk].name);
+  el.power.classList.toggle('normal', wk === 'normal');
+  el.power.classList.toggle('max', feverActive);
+  if (wk && wk !== 'normal') { el.power.style.setProperty('--wc', WEAPONS[wk].color); el.wFill.style.width = (100 * player.weaponT / CONFIG.weaponTime) + '%'; }
   setHTML(el.speed, 'sp', player.speedLv >= CONFIG.maxSpeedLv ? 'スピード MAX' : 'スピード Lv' + player.speedLv);
   el.speed.classList.toggle('max', player.speedLv >= CONFIG.maxSpeedLv);
-  el.power.classList.toggle('max', lv >= 5);
   dispScore += (score - dispScore) * Math.min(1, dt * 12);
   if (Math.abs(score - dispScore) < 1) dispScore = score;
   setHTML(el.score, 's', String(Math.round(dispScore)));
@@ -1757,7 +1852,7 @@ function clearWorld() {
 }
 function resetGame() {
   clearWorld();
-  Object.assign(player, { x: 0, z: 8, hp: CONFIG.maxHP, level: 1, speedLv: 1, bombs: CONFIG.startBombs, inv: 0, shield: 0, magnet: 0, alive: true, tilt: 0, vx: 0, vz: 0 });
+  Object.assign(player, { x: 0, z: 8, hp: CONFIG.maxHP, level: 1, weapon: 'normal', weaponT: 0, speedLv: 1, bombs: CONFIG.startBombs, inv: 0, shield: 0, magnet: 0, alive: true, tilt: 0, vx: 0, vz: 0 });
   Object.assign(shot, { burstLeft: 0, burstTimer: 0, cooldown: 0, held: false, heldTime: 0, charge: 0, charged: false });
   chargeSoundStop();
   gameTime = 0; stageTime = 0; score = 0; dispScore = 0; kills = 0; combo = 0; maxCombo = 0; comboTimer = 0;
@@ -1982,6 +2077,7 @@ const G = window.__G = window.__game = {
     spawnEnemy: (type, x = 0, z = SPAWN_Z) => { spawnEnemy(type, x, z); },
     spawnItem: (type, x = 0, z = 0) => { spawnItem(type, x, z); },
     setInvincible(v) { cheatInv = !!v; },
+    setWeapon(k) { setWeapon(k); },
     skipToBoss() { for (const e of enemies) { e.active = false; e.mesh.visible = false; } spawnIdx = spawnList.length; triggerBoss(); },
     setFever(v) { if (v >= 100) { fever = 100; startFever(); } else fever = clamp(v, 0, 100); },
     pause: () => setPause(true), resume: () => setPause(false),
