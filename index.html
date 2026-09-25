@@ -49,6 +49,14 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
 @keyframes hop{0%,70%,100%{transform:translateY(0)}35%{transform:translateY(-12px)}}
 .sub-copy{font-size:22px;font-weight:700;background:#fff;border:3px solid var(--ink);border-radius:18px;padding:8px 20px;margin-bottom:10px}
 .title-row{display:flex;gap:16px;align-items:center}
+.diff{display:flex;align-items:center;gap:10px;background:#fff;border:3px solid var(--ink);border-radius:24px;padding:8px 12px}
+.diff .lbl{font-weight:700;font-size:18px;margin:0 4px}
+.diff button{font-family:inherit;font-weight:700;font-size:20px;min-height:52px;min-width:110px;border-radius:999px;border:3px solid var(--ink);
+  background:#fff;color:var(--ink);touch-action:manipulation;cursor:pointer}
+.diff button.on[data-d="easy"]{background:#5fe0c1}
+.diff button.on[data-d="normal"]{background:#ffd84d}
+.diff button.on[data-d="hard"]{background:#ff6fb1;color:#fff}
+.diff button.on{box-shadow:0 4px 0 var(--ink);transform:translateY(-2px)}
 .ver{position:absolute;right:calc(14px + env(safe-area-inset-right));bottom:calc(10px + env(safe-area-inset-bottom));font-size:13px;opacity:.7}
 
 /* あそびかた */
@@ -198,7 +206,7 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
 </style>
 </head>
 <body>
-<!-- build: 2026-09-25 v1.6 -->
+<!-- build: 2026-09-25 v1.7 -->
 <canvas id="c"></canvas>
 <svg id="frame" aria-hidden="true"><defs><pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse"><rect width="28" height="28" fill="#ffe3f1"/><circle cx="7" cy="7" r="4" fill="#ffc9e2"/><circle cx="21" cy="21" r="4" fill="#d6ecff"/></pattern></defs><path id="frameFill" fill="url(#dots)" fill-rule="evenodd"/><path id="frameEdge" fill="none" stroke="#3b2f55" stroke-width="5" stroke-linejoin="round"/></svg>
 <div id="feverFx"></div>
@@ -237,9 +245,11 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
 <div id="title" class="screen">
   <div class="logo" aria-label="ポップシューター"><span>ポ</span><span>ッ</span><span>プ</span><span>シ</span><span>ュ</span><span>ー</span><span>タ</span><span>ー</span></div>
   <div class="sub-copy">そらの ぷにぷにを ポンッと はじけさせよう！</div>
+  <div class="diff" id="diffSel"><span class="lbl">レベル</span>
+    <button data-d="easy">かんたん</button><button data-d="normal" class="on">ふつう</button><button data-d="hard">むずかしい</button></div>
   <button class="btn" id="btnStart">スタート</button>
   <div class="title-row"><button class="btn sub small" id="btnSound">おと：オン</button></div>
-  <div class="ver">v1.6 / 2026-09-25</div>
+  <div class="ver">v1.7 / 2026-09-25</div>
 </div>
 
 <!-- あそびかた -->
@@ -294,6 +304,7 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
   <div class="panel">
     <h2 id="resTitle">クリア！</h2>
     <div class="stats">
+      <span>レベル</span><b id="resLevel">ふつう</b>
       <span>スコア</span><b id="resScore">0</b>
       <span>たおした かず</span><b id="resKills">0</b>
       <span>さいだい コンボ</span><b id="resCombo">0</b>
@@ -368,7 +379,23 @@ const CONFIG = {
   // --- 音量 ---
   bgmVolume: 0.32,
   seVolume: 0.6,
+  // --- レベル調整用 ---
+  enemyHpScale: 1,        // 敵の体力の倍率
+  bossItemInterval: 12,   // ボス戦でアイテムが出る間隔（秒）
 };
+// ---------------------------------------------------------------------
+//  レベル（むずかしさ）ごとの設定。「ふつう」は上のCONFIGそのまま
+// ---------------------------------------------------------------------
+const LEVELS = {
+  easy: { label: 'かんたん', maxHP: 5, startBombs: 2, invincibleTime: 2.2, enemyBulletSpeed: 5.6, shooterInterval: 3.0, bigInterval: 3.6,
+          waveShootRate: 0.1, enemyDensity: 0.5, maxEnemies: 8, maxEnemyBullets: 14, dropHoming: 0.8, enemyHpScale: 0.75, bossHP: 320, bossItemInterval: 8 },
+  normal: { label: 'ふつう' },
+  hard: { label: 'むずかしい', maxHP: 3, startBombs: 1, invincibleTime: 1.4, enemyBulletSpeed: 8.2, shooterInterval: 1.6, bigInterval: 2.1,
+          waveShootRate: 0.45, enemyDensity: 0.85, maxEnemies: 13, maxEnemyBullets: 36, dropHoming: 3.2, enemyHpScale: 1.25, bossHP: 600, bossItemInterval: 16 },
+};
+const BASE_CONFIG = { ...CONFIG };
+let level = 'normal';
+function applyLevel(lv) { level = lv; Object.assign(CONFIG, BASE_CONFIG, LEVELS[lv]); }
 
 // ---------------------------------------------------------------------
 //  iPad対策：ダブルタップズーム・ピンチ・スクロール防止
@@ -854,7 +881,24 @@ function noise(dur, o = {}) {
 }
 let lastHitSnd = 0, lastStarSnd = 0, starChain = 0;
 const SND = {
-  shot() { tone(1500, 700, 0.05, { type: 'square', vol: 0.045 }); },
+  shot(kind = 'normal') {
+    if (!AC) return; const t = AC.currentTime;
+    switch (kind) {
+      case 'spread':   // パパッ（少し低めで広がる感じ）
+        tone(900, 500, 0.06, { type: 'square', vol: 0.035 }); tone(1350, 750, 0.06, { type: 'square', vol: 0.025, at: t + 0.012 });
+        noise(0.05, { type: 'bandpass', f0: 2500, vol: 0.05 }); break;
+      case 'laser':    // ビィン（高くするどい）
+        tone(2600, 3400, 0.09, { type: 'sawtooth', vol: 0.03 }); tone(1300, 1700, 0.09, { type: 'sine', vol: 0.05 }); break;
+      case 'homing':   // ピュルッ（上がっていく）
+        tone(500, 1400, 0.11, { type: 'triangle', vol: 0.09 }); break;
+      case 'ball':     // ボヨン（低くはずむ）
+        tone(180, 420, 0.08, { type: 'sine', vol: 0.3 }); tone(420, 220, 0.14, { type: 'sine', vol: 0.2, at: t + 0.08 }); break;
+      case 'fever':    // キラキラ
+        tone(1800, 2600, 0.06, { type: 'square', vol: 0.03 }); tone(2600, 3600, 0.05, { type: 'triangle', vol: 0.04, at: t + 0.02 }); break;
+      default:         // ピュン
+        tone(1500, 700, 0.05, { type: 'square', vol: 0.045 });
+    }
+  },
   hit() { if (!AC || AC.currentTime - lastHitSnd < 0.045) return; lastHitSnd = AC.currentTime; tone(560, 260, 0.06, { vol: 0.14 }); },
   pop(combo, big) {
     const p = Math.pow(2, Math.min(combo - 1, 12) / 12);
@@ -941,7 +985,8 @@ function bgmStop() { bgm.on = false; clearInterval(bgm.timer); bgm.timer = null;
 let state = 'title';       // title | howto | playing | boss | clear | gameover
 let paused = false;
 let gameTime = 0, stageTime = 0;
-let score = 0, dispScore = 0, highScore = 0, kills = 0;
+let score = 0, dispScore = 0, kills = 0;
+const highScores = { easy: 0, normal: 0, hard: 0 };   // レベルごとのハイスコア
 let combo = 0, maxCombo = 0, comboTimer = 0;
 let fever = 0, feverActive = false, feverT = 0;
 let hitstop = 0, lastHitstopT = -1, trauma = 0, flashV = 0, dmgV = 0;
@@ -1043,7 +1088,7 @@ function spawnEnemy(type, x, z = SPAWN_Z) {
   let e = enemies.find(o => !o.active && o.type === type);
   if (!e) { e = createEnemy(type); enemies.push(e); }
   const d = ENEMY_DEF[type];
-  Object.assign(e, { active: true, x, z, x0: x, hp: d.hp, t: 0, flash: 0, squash: 0,
+  Object.assign(e, { active: true, x, z, x0: x, hp: d.hp * CONFIG.enemyHpScale, t: 0, flash: 0, squash: 0,
     fireT: type === 'big' ? 0.5 : 0.35, willShoot: type === 'wave' && Math.random() < CONFIG.waveShootRate, phase: 'in', targetZ: rand(-11, -6), stayT: 0, ph: rand(0, 6.28) });
   e.mesh.visible = true; e.mesh.position.set(x, 0, z);
   return e;
@@ -1143,23 +1188,24 @@ function addBullet(kind, x, z, vx, vz, o = {}) {
 }
 function fireKind(kind, idx) {
   const px = player.x, pz = player.z - 1.8, sp = CONFIG.bulletSpeed;
+  if (kind === 'ball' && idx !== 0) return false;
   if (kind === 'normal') addBullet('normal', px, pz, 0, -sp);
   else if (kind === 'spread') {
     for (const deg of [-20, 0, 20]) { const a = deg * Math.PI / 180; addBullet('spread', px, pz, Math.sin(a) * 26, -Math.cos(a) * 26, { dmg: 0.8, life: 0.85 }); }   // 3方向
   } else if (kind === 'laser') addBullet('laser', px, pz - 0.6, 0, -55, { dmg: 1.5, pierce: true, r: 0.35, life: 0.7 });
   else if (kind === 'homing') { for (const s of [-1, 1]) addBullet('homing', px + s * 0.9, player.z - 0.6, s * 9, -14, { homing: true, dmg: 1.4, life: 2.2 }); }
   else if (kind === 'ball') {
-    if (idx !== 0) return;   // ボールは1回押すと1こだけ
     ballFlip = -ballFlip;
-    addBullet('ball', px, pz, ballFlip * 7, -16, { dmg: 3, pierce: true, r: 0.75, life: 2.4 });
+    addBullet('ball', px, pz, ballFlip * 7, -16, { dmg: 3, pierce: true, r: 0.75, life: 2.4 });   // ボールは1回押すと1こだけ
   }
+  return true;
 }
 function fireVolley(idx = 0) {
   if (!player.alive) return;
   if (feverActive) { fireKind('spread', idx); fireKind('laser', idx); fireKind('homing', idx); }
-  else fireKind(player.weapon, idx);
+  else if (!fireKind(player.weapon, idx)) return;
   burst(player.x, 0.3, player.z - 2.2, [0xfff27a, 0xffffff], 2, 3, 0.14, 0.15, 0);
-  SND.shot();
+  SND.shot(feverActive ? 'fever' : player.weapon);
 }
 function setWeapon(kind) {
   player.weapon = kind; player.weaponT = kind === 'normal' ? 0 : CONFIG.weaponTime;
@@ -1415,7 +1461,7 @@ function updateBoss(dt) {
   if (boss.phase === 'enter') {
     const k = Math.min(1, boss.t / 2.8);
     boss.z = -27 + 18 * (1 - Math.pow(1 - k, 3));
-    if (k >= 1) { boss.phase = 'fight'; boss.t = 0; boss.patT = 0; boss.fireT = 0.8; }
+    if (k >= 1) { boss.phase = 'fight'; boss.t = 0; boss.patT = 0; boss.fireT = 0.8; boss.itemT = CONFIG.bossItemInterval * 0.5; }
   } else if (boss.phase === 'fight') {
     boss.x = Math.sin(boss.t * 0.55) * 5.5;
     boss.z = -9 + Math.sin(boss.t * 0.9) * 1.0;
@@ -1438,6 +1484,13 @@ function updateBoss(dt) {
         for (let q = 0; q < 2; q++) fireEnemy(ox, oz, boss.spin + q * Math.PI, 5.2);
         boss.fireT = 0.2;
       }
+    }
+    // ボス戦でもときどきアイテムが出る
+    boss.itemT -= dt;
+    if (boss.itemT <= 0) {
+      boss.itemT = CONFIG.bossItemInterval;
+      spawnItem(pickItemType(), clamp(boss.x + rand(-3, 3), -PB.x, PB.x), boss.z + 3);
+      burst(boss.x, 1, boss.z + 3, [0xffffff, 0xffd84d], 10, 6, 0.2, 0.4);
     }
     if (half) {
       boss.summonT -= dt;
@@ -1898,6 +1951,7 @@ function goTitle() {
 function goHowto() { state = 'howto'; showScreen('howto'); }
 function startGame() {
   initAudio();
+  applyLevel(level);
   paused = false; if (AC && AC.state === 'suspended') AC.resume();
   resetGame(); state = 'playing';
   showScreen(null);
@@ -1909,12 +1963,13 @@ function showResult(win) {
   state = win ? 'clear' : 'gameover';
   shotRelease(); chargeSoundStop(); bgmStop();
   if (feverActive) endFever();
-  const isNew = score > highScore && score > 0;
-  highScore = Math.max(highScore, score);
+  const isNew = score > highScores[level] && score > 0;
+  highScores[level] = Math.max(highScores[level], score);
+  $('resLevel').textContent = LEVELS[level].label;
   $('resTitle').textContent = win ? 'クリア！' : 'ざんねん…';
   $('resTitle').classList.toggle('lose', !win);
   $('resScore').textContent = score; $('resKills').textContent = kills;
-  $('resCombo').textContent = maxCombo; $('resHigh').textContent = highScore;
+  $('resCombo').textContent = maxCombo; $('resHigh').textContent = highScores[level];
   $('resNew').classList.toggle('hidden', !isNew);
   $('controls').classList.add('hidden'); $('hud').classList.add('hidden');
   showScreen('result'); resultShownAt = performance.now();
@@ -1940,6 +1995,10 @@ function onTap(elm, fn, guard) {
   });
 }
 onTap($('btnStart'), () => { SND.ui(); goHowto(); });
+document.querySelectorAll('#diffSel button').forEach(b => onTap(b, () => {
+  level = b.dataset.d; SND.ui();
+  document.querySelectorAll('#diffSel button').forEach(x => x.classList.toggle('on', x === b));
+}));
 onTap($('btnGo'), () => { SND.ui(); startGame(); });
 onTap($('btnSound'), () => {
   soundOn = !soundOn; $('btnSound').textContent = soundOn ? 'おと：オン' : 'おと：オフ';
@@ -2083,6 +2142,7 @@ const G = window.__G = window.__game = {
   },
   get items() { return items.filter(i => i.active).map(i => ({ type: i.type, x: i.x, z: i.z })); },
   get stars() { return stars.filter(s => s.active).length; },
+  get level() { return level; },
   get score() { return score; },
   get kills() { return kills; },
   get combo() { return combo; },
@@ -2098,6 +2158,7 @@ const G = window.__G = window.__game = {
     spawnItem: (type, x = 0, z = 0) => { spawnItem(type, x, z); },
     setInvincible(v) { cheatInv = !!v; },
     setWeapon(k) { setWeapon(k); },
+    setLevel(lv) { level = lv; },
     skipToBoss() { for (const e of enemies) { e.active = false; e.mesh.visible = false; } spawnIdx = spawnList.length; triggerBoss(); },
     setFever(v) { if (v >= 100) { fever = 100; startFever(); } else fever = clamp(v, 0, 100); },
     pause: () => setPause(true), resume: () => setPause(false),
