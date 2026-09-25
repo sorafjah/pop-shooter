@@ -21,6 +21,7 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
   font-family:'BIZ UDPGothic','Hiragino Maru Gothic ProN','Hiragino Sans',sans-serif;color:var(--ink);
   touch-action:manipulation;overscroll-behavior:none;}
 #c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:0}
+#frame{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:4}
 .hidden{display:none!important}
 
 /* ---------- 共通ボタン ---------- */
@@ -39,7 +40,7 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
 
 /* タイトル */
 #title{gap:18px}
-.logo{display:flex;gap:2px;font-weight:700;font-size:min(13vw,104px);line-height:1;margin-bottom:4px}
+.logo{display:flex;gap:2px;font-weight:700;font-size:min(11vw,104px);line-height:1;margin-bottom:4px}
 .logo span{display:inline-block;color:#fff;
   text-shadow:0 5px 0 var(--ink),4px 0 0 var(--ink),-4px 0 0 var(--ink),0 -4px 0 var(--ink),4px 4px 0 var(--ink),-4px 4px 0 var(--ink),4px -4px 0 var(--ink),-4px -4px 0 var(--ink),0 10px 0 rgba(59,47,85,.25);
   animation:hop 1.6s ease-in-out infinite}
@@ -181,12 +182,25 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
 #rotate{background:#3b2f55;color:#fff;z-index:40;font-size:30px;font-weight:700;gap:20px;text-align:center}
 #rotate .ico{font-size:80px;animation:rot 2s ease-in-out infinite}
 @keyframes rot{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+/* 縦持ちのとき */
+@media (orientation: portrait){
+  .howto-box{max-height:97vh;padding:1.4vh 2vw 1.6vh}
+  .howto-grid{grid-template-columns:repeat(2,1fr)}
+  .card{padding:.8vh 1.6vw}
+  .card .ic{flex:0 0 13vw;height:8vh;zoom:.8}
+  .card .tx{font-size:max(14px,2.6vw)}
+  .card .tx b{font-size:max(16px,3vw)}
+  .it b{font-size:max(12px,2.3vw)}
+  .it small{font-size:max(11px,1.9vw)}
+  #btnBomb{right:calc(190px + env(safe-area-inset-right));bottom:calc(46px + env(safe-area-inset-bottom))}
+}
 @media (prefers-reduced-motion: reduce){.logo span,.mini-stick i,#feverFx{animation:none}}
 </style>
 </head>
 <body>
-<!-- build: 2026-09-25 v1.3 -->
+<!-- build: 2026-09-25 v1.4 -->
 <canvas id="c"></canvas>
+<svg id="frame" aria-hidden="true"><defs><pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse"><rect width="28" height="28" fill="#ffe3f1"/><circle cx="7" cy="7" r="4" fill="#ffc9e2"/><circle cx="21" cy="21" r="4" fill="#d6ecff"/></pattern></defs><path id="frameFill" fill="url(#dots)" fill-rule="evenodd"/><path id="frameEdge" fill="none" stroke="#3b2f55" stroke-width="5" stroke-linejoin="round"/></svg>
 <div id="feverFx"></div>
 
 <!-- コントローラー -->
@@ -225,7 +239,7 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%
   <div class="sub-copy">そらの ぷにぷにを ポンッと はじけさせよう！</div>
   <button class="btn" id="btnStart">スタート</button>
   <div class="title-row"><button class="btn sub small" id="btnSound">おと：オン</button></div>
-  <div class="ver">v1.3 / 2026-09-25</div>
+  <div class="ver">v1.4 / 2026-09-25</div>
 </div>
 
 <!-- あそびかた -->
@@ -387,9 +401,9 @@ function take(pool) {
 function makePool(n, f) { const a = []; for (let i = 0; i < n; i++) a.push(f(i)); a.cur = 0; return a; }
 
 // 座標系：X=左右、Z=上下（マイナスが画面の上）。Y=高さ
-const FIELD = { xMin: -13, xMax: 13, zTop: -15, zBottom: 12.5 };
-const PB = { x: 12, zMin: -10.5, zMax: 11 };
-const XS = 1.35; // 出現位置を横に広げる倍率   // 自機の移動範囲
+const FIELD = { xMin: -10, xMax: 10, zTop: -15, zBottom: 12.5 };   // 縦長のステージ
+const PB = { x: 9.2, zMin: -10.5, zMax: 11 };   // 自機の移動範囲
+const XS = 1.05; // 出現位置を横に広げる倍率
 const SPAWN_Z = -21;
 
 // ---------------------------------------------------------------------
@@ -409,30 +423,44 @@ function fitCamera() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
+  camera.clearViewOffset();
   camera.updateProjectionMatrix();
-  const xLim = 0.96;
-  const yLim = 0.9;
+  const portrait = h > w;
+  // 縦持ち：下の約1/4をコントローラー用にあける ／ 横持ち：左右にコントローラー用のすき間をあける
+  const yTop = 0.9, yBot = portrait ? -1 + 2 * 0.25 : -0.93;
+  const half = (yTop - yBot) / 2, mid = (yTop + yBot) / 2;
+  const xLim = portrait ? 0.97 : Math.min(0.97, 1 - 2 * 215 / w);
   const corners = [
     new V3(FIELD.xMin, 0, FIELD.zTop), new V3(FIELD.xMax, 0, FIELD.zTop),
     new V3(FIELD.xMin, 0, FIELD.zBottom), new V3(FIELD.xMax, 0, FIELD.zBottom)];
   let lo = 8, hi = 300;
   const p = new V3();
   for (let i = 0; i < 40; i++) {
-    const mid = (lo + hi) / 2;
-    camera.position.copy(CAM_TARGET).addScaledVector(CAM_DIR, mid);
-    camera.lookAt(CAM_TARGET);
-    camera.updateMatrixWorld();
+    const m = (lo + hi) / 2;
+    camera.position.copy(CAM_TARGET).addScaledVector(CAM_DIR, m);
+    camera.lookAt(CAM_TARGET); camera.updateMatrixWorld();
     let ok = true;
-    for (const c of corners) {
-      p.copy(c).project(camera);
-      if (Math.abs(p.x) > xLim || Math.abs(p.y) > yLim) { ok = false; break; }
-    }
-    if (ok) hi = mid; else lo = mid;
+    for (const c of corners) { p.copy(c).project(camera); if (Math.abs(p.x) > xLim || Math.abs(p.y) > half) { ok = false; break; } }
+    if (ok) hi = m; else lo = m;
   }
   camBase.copy(CAM_TARGET).addScaledVector(CAM_DIR, hi);
-  camera.position.copy(camBase);
-  camera.lookAt(CAM_TARGET);
-  checkRotate();
+  camera.position.copy(camBase); camera.lookAt(CAM_TARGET);
+  // ステージが上のほうに来るよう画面をずらす
+  camera.setViewOffset(w, h, 0, Math.round(mid * h / 2), w, h);
+  camera.updateMatrixWorld();
+  drawFrame(w, h);
+}
+// ステージの外（かべ）を水玉もようでおおう
+function drawFrame(w, h) {
+  const sp = c => { const v = new V3(c[0], 0, c[1]).project(camera); return [(v.x + 1) / 2 * w, (1 - v.y) / 2 * h]; };
+  const tl = sp([FIELD.xMin - 0.3, FIELD.zTop - 3]), tr = sp([FIELD.xMax + 0.3, FIELD.zTop - 3]);
+  const bl = sp([FIELD.xMin - 0.3, FIELD.zBottom + 0.8]), br = sp([FIELD.xMax + 0.3, FIELD.zBottom + 0.8]);
+  const top = -10, bot = h > w ? bl[1] : h + 10;
+  const f = n => n.toFixed(1);
+  const hole = `M${f(tl[0])} ${top} L${f(tr[0])} ${top} L${f(tr[0])} ${f(tr[1])} L${f(br[0])} ${f(bot)} L${f(bl[0])} ${f(bot)} L${f(tl[0])} ${f(tl[1])} Z`;
+  $('frame').setAttribute('viewBox', `0 0 ${w} ${h}`);
+  $('frameFill').setAttribute('d', `M-10 -10 H${w + 10} V${h + 10} H-10 Z ` + hole);
+  $('frameEdge').setAttribute('d', hole);
 }
 
 // ---------------------------------------------------------------------
@@ -1379,6 +1407,7 @@ function updateEnemies(dt) {
     const w = Math.sin(e.t * 6 + e.ph) * 0.05, sq = e.squash * 0.3;
     e.mesh.scale.set(1 + w + sq, 1 - w - sq, 1 + w + sq);
     e.mesh.position.set(e.x, Math.sin(e.t * 3 + e.ph) * 0.15, e.z);
+    if (e.type !== 'big') e.x = clamp(e.x, FIELD.xMin + 0.9, FIELD.xMax - 0.9);   // かべの外には出ない
     if (e.wings) { e.wings[0].rotation.z = Math.sin(e.t * 14) * 0.5; e.wings[1].rotation.z = -Math.sin(e.t * 14) * 0.5; }
     if (e.z > FIELD.zBottom + 4 || Math.abs(e.x) > 24) { e.active = false; e.mesh.visible = false; }
   }
@@ -1394,7 +1423,7 @@ function updateBoss(dt) {
     boss.z = -27 + 18 * (1 - Math.pow(1 - k, 3));
     if (k >= 1) { boss.phase = 'fight'; boss.t = 0; boss.patT = 0; boss.fireT = 0.8; }
   } else if (boss.phase === 'fight') {
-    boss.x = Math.sin(boss.t * 0.55) * 8;
+    boss.x = Math.sin(boss.t * 0.55) * 5.5;
     boss.z = -9 + Math.sin(boss.t * 0.9) * 1.0;
     const half = boss.hp < boss.maxHp * 0.5;
     boss.patT += dt;
@@ -1472,7 +1501,7 @@ function updateBullets(dt) {
     }
     b.x += b.vx * dt; b.z += b.vz * dt;
     if (b.kind === 'ball' && Math.abs(b.x) > PB.x + 0.6) { b.x = Math.sign(b.x) * (PB.x + 0.6); b.vx = -b.vx; SND.hit(); }   // かべではね返る
-    if (b.life <= 0 || b.z < FIELD.zTop - 2 || b.z > 16 || Math.abs(b.x) > 20) { b.active = false; continue; }
+    if (b.life <= 0 || b.z < FIELD.zTop - 2 || b.z > 16 || Math.abs(b.x) > FIELD.xMax + 1.5) { b.active = false; continue; }
     // 当たり判定（レーザーとボールは貫通する）
     for (const e of enemies) {
       if (!e.active || e.z < FIELD.zTop || b.hits.has(e)) continue;   // 画面に入るまでは当たらない
@@ -1518,7 +1547,7 @@ function updateBullets(dt) {
   for (const b of eBullets) {
     if (!b.active) continue;
     b.t += dt; b.x += b.vx * dt; b.z += b.vz * dt;
-    if (b.z > 16 || b.z < -28 || Math.abs(b.x) > 20) { b.active = false; continue; }
+    if (b.z > 16 || b.z < -28 || Math.abs(b.x) > FIELD.xMax + 1.5) { b.active = false; continue; }
     if (!player.alive) continue;
     const d2 = (b.x - player.x) ** 2 + (b.z - player.z) ** 2;
     if (player.shield > 0) {
@@ -1983,11 +2012,7 @@ window.addEventListener('blur', () => { input.keys = {}; });
 document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
 
 // 向きチェック
-function checkRotate() {
-  const portrait = window.innerHeight > window.innerWidth * 1.05 && navigator.maxTouchPoints > 0;
-  $('rotate').classList.toggle('hidden', !portrait);
-  if (portrait) setPause(true);
-}
+function checkRotate() { $('rotate').classList.add('hidden'); }   // 縦持ち・横持ちどちらもOK
 window.addEventListener('resize', fitCamera);
 window.addEventListener('orientationchange', () => setTimeout(fitCamera, 200));
 
@@ -2015,7 +2040,7 @@ function tick(dt) {
     player.x = Math.sin(gameTime * 0.8) * 2; player.vx = Math.cos(gameTime * 0.8) * 1.6 * 6; player.z = 10;
   } else {
     updateEnemies(dt); updateBoss(dt); updateItems(dt); updateStars(dt);
-    for (const b of eBullets) if (b.active) { b.x += b.vx * dt; b.z += b.vz * dt; b.t += dt; if (b.z > 16 || b.z < -28 || Math.abs(b.x) > 20) b.active = false; }
+    for (const b of eBullets) if (b.active) { b.x += b.vx * dt; b.z += b.vz * dt; b.t += dt; if (b.z > 16 || b.z < -28 || Math.abs(b.x) > FIELD.xMax + 1.5) b.active = false; }
   }
   updateParticles(dt);
 }
